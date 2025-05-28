@@ -1,9 +1,8 @@
-use core::ops::Deref;
-
-use bytecode::{eof::CodeInfo, utils::read_u16, Bytecode};
-use primitives::{Bytes, B256};
-
 use super::{EofCodeInfo, EofContainer, EofData, Immediates, Jumps, LegacyBytecode};
+use crate::{interpreter_types::LoopControl, InterpreterAction};
+use bytecode::{eof::CodeInfo, utils::read_u16, Bytecode};
+use core::{ops::Deref, ptr};
+use primitives::{Bytes, B256};
 
 #[cfg(feature = "serde")]
 mod serde;
@@ -13,6 +12,15 @@ pub struct ExtBytecode {
     base: Bytecode,
     bytecode_hash: Option<B256>,
     instruction_pointer: *const u8,
+    previous_pointer: Option<*const u8>,
+    /// Actions that the EVM should do.
+    ///
+    /// Set inside `CALL` or `CREATE` instructions and `RETURN` or `REVERT` instructions.
+    ///
+    /// Additionally those instructions will set [`InstructionResult`] to
+    /// [`CallOrCreate`][InstructionResult::CallOrCreate]/[`Return`][InstructionResult::Return]/[`Revert`][InstructionResult::Revert]
+    /// so we know the reason.
+    pub action: InterpreterAction,
 }
 
 impl Deref for ExtBytecode {
@@ -31,6 +39,8 @@ impl ExtBytecode {
             base,
             instruction_pointer,
             bytecode_hash: None,
+            action: InterpreterAction::None,
+            previous_pointer: None,
         }
     }
 
@@ -41,6 +51,8 @@ impl ExtBytecode {
             base,
             instruction_pointer,
             bytecode_hash: Some(hash),
+            action: InterpreterAction::None,
+            previous_pointer: None,
         }
     }
 
@@ -54,6 +66,30 @@ impl ExtBytecode {
     /// Returns the bytecode hash.
     pub fn hash(&mut self) -> Option<B256> {
         self.bytecode_hash
+    }
+}
+
+impl LoopControl for ExtBytecode {
+    fn is_not_end(&self) -> bool {
+        self.instruction_pointer == ptr::null()
+    }
+
+    fn revert_to_previous_pointer(&mut self) {
+        if let Some(previous_pointer) = self.previous_pointer {
+            self.instruction_pointer = previous_pointer;
+        }
+    }
+
+    fn set_action(&mut self, action: InterpreterAction) {
+        self.action = action;
+        self.previous_pointer = Some(core::mem::replace(
+            &mut self.instruction_pointer,
+            ptr::null(),
+        ));
+    }
+
+    fn take_action(&mut self) -> InterpreterAction {
+        core::mem::take(&mut self.action)
     }
 }
 

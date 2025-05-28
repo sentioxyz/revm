@@ -262,17 +262,15 @@ where
     CTX: ContextTr<Journal: JournalExt> + Host,
     IT: InterpreterTypes,
 {
-    interpreter.reset_control();
-
     let mut log_num = context.journal().logs().len();
     // Main loop
-    while interpreter.control.instruction_result().is_continue() {
+    while interpreter.bytecode.is_not_end() {
         // Get current opcode.
         let opcode = interpreter.bytecode.opcode();
 
         // Call Inspector step.
         inspector.step(interpreter, context);
-        if interpreter.control.instruction_result() != InstructionResult::Continue {
+        if interpreter.bytecode.is_not_end() {
             break;
         }
 
@@ -300,6 +298,8 @@ where
         // Call step_end.
         inspector.step_end(interpreter, context);
     }
+
+    interpreter.bytecode.revert_to_previous_pointer();
 
     let next_action = interpreter.take_next_action();
 
