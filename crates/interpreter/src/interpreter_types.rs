@@ -291,6 +291,7 @@ pub trait LoopControl {
     /// Returns `true` if the loop should continue.
     fn is_not_end(&self) -> bool;
     /// Is end of the loop.
+    #[inline]
     fn is_end(&self) -> bool {
         !self.is_not_end()
     }

@@ -70,16 +70,19 @@ impl ExtBytecode {
 }
 
 impl LoopControl for ExtBytecode {
+    #[inline]
     fn is_not_end(&self) -> bool {
-        self.instruction_pointer.is_null()
+        !self.instruction_pointer.is_null()
     }
 
+    #[inline]
     fn revert_to_previous_pointer(&mut self) {
         if let Some(previous_pointer) = self.previous_pointer {
             self.instruction_pointer = previous_pointer;
         }
     }
 
+    #[inline]
     fn set_action(&mut self, action: InterpreterAction) {
         self.action = action;
         self.previous_pointer = Some(core::mem::replace(
@@ -88,6 +91,7 @@ impl LoopControl for ExtBytecode {
         ));
     }
 
+    #[inline]
     fn action(&mut self) -> &mut InterpreterAction {
         &mut self.action
     }
