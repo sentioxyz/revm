@@ -1,4 +1,4 @@
-use crate::{CallInput, InstructionResult, InterpreterAction};
+use crate::{CallInput, InterpreterAction};
 use bytecode::eof::CodeInfo;
 use core::cell::Ref;
 use core::ops::{Deref, Range};
@@ -303,7 +303,7 @@ pub trait LoopControl {
     /// Previous pointer can be restored by calling [`LoopControl::revert_to_previous_pointer`].
     fn set_action(&mut self, action: InterpreterAction);
     /// Takes next action.
-    fn take_action(&mut self) -> InterpreterAction;
+    fn action(&mut self) -> &mut InterpreterAction;
 }
 
 pub trait RuntimeFlag {

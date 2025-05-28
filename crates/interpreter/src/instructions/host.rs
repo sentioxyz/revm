@@ -1,7 +1,7 @@
 use crate::{
     gas::{self, warm_cold_cost, CALL_STIPEND},
     instructions::utility::{IntoAddress, IntoU256},
-    interpreter_types::{InputsTr, InterpreterTypes, LoopControl, MemoryTr, RuntimeFlag, StackTr},
+    interpreter_types::{InputsTr, InterpreterTypes, MemoryTr, RuntimeFlag, StackTr},
     Host, InstructionResult,
 };
 use core::cmp::min;
@@ -165,8 +165,7 @@ pub fn blockhash<WIRE: InterpreterTypes, H: Host + ?Sized>(
         let Some(hash) = context.host.block_hash(as_u64_saturated!(requested_number)) else {
             context
                 .interpreter
-                .bytecode
-                .set_instruction_result(InstructionResult::FatalExternalError);
+                .halt(InstructionResult::FatalExternalError);
             return;
         };
         U256::from_be_bytes(hash.0)
@@ -332,8 +331,5 @@ pub fn selfdestruct<WIRE: InterpreterTypes, H: Host + ?Sized>(
         gas::selfdestruct_cost(context.interpreter.runtime_flag.spec_id(), res)
     );
 
-    context
-        .interpreter
-        .bytecode
-        .set_instruction_result(InstructionResult::SelfDestruct);
+    context.interpreter.halt(InstructionResult::SelfDestruct);
 }

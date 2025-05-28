@@ -304,7 +304,7 @@ where
     let next_action = interpreter.take_next_action();
 
     // handle selfdestruct
-    if let InterpreterAction::Return { result } = &next_action {
+    if let InterpreterAction::Return(result) = &next_action {
         if result.result == InstructionResult::SelfDestruct {
             match context.journal().journal().last() {
                 Some(JournalEntry::AccountDestroyed {

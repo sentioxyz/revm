@@ -71,7 +71,7 @@ impl ExtBytecode {
 
 impl LoopControl for ExtBytecode {
     fn is_not_end(&self) -> bool {
-        self.instruction_pointer == ptr::null()
+        self.instruction_pointer.is_null()
     }
 
     fn revert_to_previous_pointer(&mut self) {
@@ -88,8 +88,8 @@ impl LoopControl for ExtBytecode {
         ));
     }
 
-    fn take_action(&mut self) -> InterpreterAction {
-        core::mem::take(&mut self.action)
+    fn action(&mut self) -> &mut InterpreterAction {
+        &mut self.action
     }
 }
 

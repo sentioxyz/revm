@@ -80,6 +80,16 @@ impl InterpreterAction {
         }
     }
 
+    /// Returns [`InstructionResult`] if action is return.
+    ///
+    /// Else it returns [None].
+    pub fn instruction_result(&self) -> Option<InstructionResult> {
+        match self {
+            InterpreterAction::Return(result) => Some(result.result),
+            _ => None,
+        }
+    }
+
     /// Create new frame action with the given frame input.
     pub fn new_frame(frame_input: FrameInput) -> Self {
         Self::NewFrame(frame_input)
