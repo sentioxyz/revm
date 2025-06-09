@@ -102,11 +102,11 @@ impl Account {
     }
 
     /// Marks the account as warm and return true if it was previously cold.
-    /// 
+    ///
     /// If transaction id is different, invalidate [`AccountStatus::CodeLoaded`] flag.
     #[inline]
     pub fn mark_warm_with_transaction_id(&mut self, transaction_id: usize) -> bool {
-        let same_id = self.transaction_id == transaction_id;
+        let same_id: bool = self.transaction_id == transaction_id;
         let is_cold = self.status.contains(AccountStatus::Cold);
 
         self.status -= AccountStatus::Cold;

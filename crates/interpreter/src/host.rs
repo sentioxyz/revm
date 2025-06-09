@@ -86,6 +86,8 @@ pub trait Host {
     fn load_account_delegated(&mut self, address: Address) -> Option<StateLoad<AccountLoad>>;
     /// Load account code, calls `ContextTr::journal_mut().load_account_code(address)`
     fn load_account_code(&mut self, address: Address) -> Option<StateCodeLoad<Bytes>>;
+    /// Load account code, calls `ContextTr::journal_mut().load_account_code(address)`
+    fn load_account_code_size(&mut self, address: Address) -> Option<StateCodeLoad<usize>>;
     /// Load account code hash, calls `ContextTr::journal_mut().code_hash(address)`
     fn load_account_code_hash(&mut self, address: Address) -> Option<StateCodeLoad<B256>>;
 }
@@ -197,6 +199,15 @@ impl<CTX: ContextTr> Host for CTX {
     fn load_account_code(&mut self, address: Address) -> Option<StateCodeLoad<Bytes>> {
         self.journal_mut()
             .code(address)
+            .map_err(|e| {
+                *self.error() = Err(e.into());
+            })
+            .ok()
+    }
+
+    fn load_account_code_size(&mut self, address: Address) -> Option<StateCodeLoad<usize>> {
+        self.journal_mut()
+            .code_size(address)
             .map_err(|e| {
                 *self.error() = Err(e.into());
             })
@@ -376,6 +387,10 @@ impl Host for DummyHost {
     }
 
     fn load_account_code_hash(&mut self, _address: Address) -> Option<StateCodeLoad<B256>> {
+        None
+    }
+
+    fn load_account_code_size(&mut self, _address: Address) -> Option<StateCodeLoad<usize>> {
         None
     }
 }

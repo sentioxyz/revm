@@ -161,6 +161,15 @@ pub trait JournalTr {
         Ok(StateCodeLoad::new(code, a.is_cold, a.is_code_cold))
     }
 
+    /// Returns code size of the account.
+    #[inline]
+    fn code_size(
+        &mut self,
+        address: Address,
+    ) -> Result<StateCodeLoad<usize>, <Self::Database as Database>::Error> {
+        self.code(address).map(|i| i.map(|b| b.len()))
+    }
+
     /// Gets code hash of account.
     ///
     /// In case of EOF account it will return `EOF_MAGIC_HASH`
@@ -349,7 +358,7 @@ pub struct AccountLoad {
     pub is_delegate_account_cold: Option<bool>,
     /// Is account empty, if `true` account is not created
     pub is_empty: bool,
-    /// Is account code cold loaded
+    /// Is account code cold loaded. in case of delegated code
     pub is_code_cold: bool,
     /// Account code size
     pub code_size: Option<usize>,

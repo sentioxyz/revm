@@ -662,9 +662,8 @@ impl<ENTRY: JournalEntryTr> JournalInner<ENTRY> {
             Entry::Occupied(entry) => {
                 let account = entry.into_mut();
                 let is_cold = account.mark_warm_with_transaction_id(self.transaction_id);
-                // TODO
                 let is_code_cold = account.is_code_cold();
-                // if it is colad loaded we need to clear local flags that can interact with selfdestruct
+                // if it is cold loaded we need to clear local flags that can interact with selfdestruct
                 if is_cold {
                     // if it is cold loaded and we have selfdestructed locally it means that
                     // account was selfdestructed in previous transaction and we need to clear its information and storage.
@@ -674,6 +673,7 @@ impl<ENTRY: JournalEntryTr> JournalInner<ENTRY> {
                     }
                     // unmark locally created
                     account.unmark_created_locally();
+                    account.mark_code_cold();
                 }
                 StateCodeLoad {
                     data: account,
@@ -690,12 +690,11 @@ impl<ENTRY: JournalEntryTr> JournalInner<ENTRY> {
 
                 // Precompiles among some other account are warm loaded so we need to take that into account
                 let is_cold = !self.warm_preloaded_addresses.contains(&address);
-                let is_code_cold = account.is_code_cold();
 
                 StateCodeLoad {
                     data: vac.insert(account),
                     is_cold,
-                    is_code_cold,
+                    is_code_cold: false,
                 }
             }
         };
