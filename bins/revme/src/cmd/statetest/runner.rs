@@ -263,6 +263,8 @@ pub fn execute_test_suite(
             .unwrap_or(U256::ONE)
             .try_into()
             .unwrap_or(1);
+        // TODO override Osaka tx gas limit cap.
+        cfg.tx_gas_limit_cap = Some(u64::MAX);
 
         // Block env
         block.number = unit.env.current_number.try_into().unwrap_or(u64::MAX);
