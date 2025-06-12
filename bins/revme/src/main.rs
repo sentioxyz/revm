@@ -1,8 +1,12 @@
 use clap::Parser;
 use revme::cmd::{Error, MainCmd};
 
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 fn main() -> Result<(), Error> {
     set_thread_panic_hook();
+    let _profiler = dhat::Profiler::new_heap();
     MainCmd::parse().run().inspect_err(|e| println!("{e:?}"))
 }
 

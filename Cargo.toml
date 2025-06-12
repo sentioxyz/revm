@@ -147,10 +147,10 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [profile.release]
 codegen-units = 16
-debug = "line-tables-only"
+debug = 1 #"line-tables-only"
 lto = "thin"
 opt-level = 3
-panic = "abort"
+#panic = "abort"
 strip = true
 
 # Use the `--profile profiling` flag to show symbols in release mode.

@@ -28,6 +28,9 @@ inspector = { workspace = true, features = ["std", "serde-json"] }
 statetest-types.workspace = true
 criterion.workspace = true
 
+# debug
+dhat = "0.3.3"
+
 # alloy
 alloy-rlp = { workspace = true, features = ["arrayvec", "derive"] }
 alloy-sol-types.workspace = true

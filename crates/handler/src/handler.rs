@@ -200,6 +200,7 @@ pub trait Handler {
         let first_frame_input = self.first_frame_input(evm, gas_limit)?;
 
         let f = evm.ctx_mut().local_mut().frame_stack();
+        println!("Stack size: {:?}", f.stack.capacity());
         let frame_stack =
             unsafe { core::mem::transmute::<&mut FrameStack<_>, &mut FrameStack<Self::Frame>>(f) };
 

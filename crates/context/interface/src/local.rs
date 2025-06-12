@@ -9,8 +9,8 @@ use std::{boxed::Box, rc::Rc, vec::Vec};
 /// Non-empty, item-pooling Vec.
 #[derive(Clone, Debug)]
 pub struct FrameStack<T> {
-    stack: Vec<Box<T>>,
-    index: usize,
+    pub stack: Vec<Box<T>>,
+    pub index: usize,
 }
 
 impl<T> Default for FrameStack<T> {

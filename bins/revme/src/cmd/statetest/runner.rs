@@ -317,6 +317,9 @@ pub fn execute_test_suite(
                 continue;
             }
 
+            println!("Test name: {:?} and path: {:?}", name, path);
+            dhat::ad_hoc_event(100);
+
             cfg.spec = spec_name.to_spec_id();
 
             // set default max blobs number to be 9 for prague
