@@ -23,6 +23,7 @@ primitives.workspace = true
 database-interface.workspace = true
 state.workspace = true
 bytecode.workspace = true
+alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.9" }
 
 # misc
 derive-where.workspace = true
