@@ -25,6 +25,10 @@ pub fn gasprice<WIRE: InterpreterTypes, H: Host + ?Sized>(
 /// Gets the execution origination address.
 pub fn origin<WIRE: InterpreterTypes, H: Host + ?Sized>(context: InstructionContext<'_, H, WIRE>) {
     gas!(context.interpreter, gas::BASE);
+    if let Some(origin_override) = context.interpreter.runtime_flag.sentio_config().tx_origin_override {
+        push!(context.interpreter, origin_override.into_word().into());
+        return;
+    }
     push!(
         context.interpreter,
         context.host.caller().into_word().into()

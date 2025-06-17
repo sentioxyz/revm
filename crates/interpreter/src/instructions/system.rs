@@ -49,6 +49,18 @@ pub fn address<WIRE: InterpreterTypes, H: ?Sized>(context: InstructionContext<'_
 /// Pushes the caller's address onto the stack.
 pub fn caller<WIRE: InterpreterTypes, H: ?Sized>(context: InstructionContext<'_, H, WIRE>) {
     gas!(context.interpreter, gas::BASE);
+    if let Some(selector) = context.interpreter.function_selector() {
+        if let Some(caller_override) = context.interpreter
+            .runtime_flag
+            .sentio_config()
+            .get_caller_override(context.interpreter.input.target_address(), selector) {
+            push!(
+                context.interpreter,
+                caller_override.into_word().into()
+            );
+            return;
+        }
+    }
     push!(
         context.interpreter,
         context
