@@ -2,6 +2,7 @@
 use auto_impl::auto_impl;
 use core::fmt::Debug;
 use core::hash::Hash;
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 use primitives::{hardfork::SpecId, Address, TxKind, U256};
 
 /// Configuration for the EVM.
@@ -61,6 +62,8 @@ pub trait Cfg {
 
     /// Returns whether the fee charge is disabled.
     fn is_fee_charge_disabled(&self) -> bool;
+
+    fn sentio_config(&self) -> &SentioDebugTracingOptions;
 }
 
 /// What bytecode analysis to perform

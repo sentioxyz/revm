@@ -549,7 +549,7 @@ mod tests {
             )
             .modify_cfg_chained(|cfg| cfg.spec = OpSpecId::BEDROCK);
 
-        let gas = call_last_frame_return(ctx, InstructionResult::Revert, Gas::new(90));
+        let gas = call_last_frame_return(ctx, InstructionResult::Revert, Gas::new(90, false));
         assert_eq!(gas.remaining(), 90);
         assert_eq!(gas.spent(), 10);
         assert_eq!(gas.refunded(), 0);
@@ -565,7 +565,7 @@ mod tests {
             )
             .modify_cfg_chained(|cfg| cfg.spec = OpSpecId::REGOLITH);
 
-        let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90));
+        let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90, false));
         assert_eq!(gas.remaining(), 90);
         assert_eq!(gas.spent(), 10);
         assert_eq!(gas.refunded(), 0);
@@ -582,7 +582,7 @@ mod tests {
             )
             .modify_cfg_chained(|cfg| cfg.spec = OpSpecId::REGOLITH);
 
-        let mut ret_gas = Gas::new(90);
+        let mut ret_gas = Gas::new(90, false);
         ret_gas.record_refund(20);
 
         let gas = call_last_frame_return(ctx.clone(), InstructionResult::Stop, ret_gas);
@@ -606,7 +606,7 @@ mod tests {
                     .build_fill(),
             )
             .modify_cfg_chained(|cfg| cfg.spec = OpSpecId::BEDROCK);
-        let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90));
+        let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90, false));
         assert_eq!(gas.remaining(), 0);
         assert_eq!(gas.spent(), 100);
         assert_eq!(gas.refunded(), 0);
@@ -623,7 +623,7 @@ mod tests {
                     .build_fill(),
             )
             .modify_cfg_chained(|cfg| cfg.spec = OpSpecId::BEDROCK);
-        let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90));
+        let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90, false));
         assert_eq!(gas.remaining(), 100);
         assert_eq!(gas.spent(), 0);
         assert_eq!(gas.refunded(), 0);
@@ -1075,7 +1075,7 @@ mod tests {
         evm.ctx().chain.operator_fee_scalar = Some(U256::from(OP_FEE_MOCK_PARAM));
         evm.ctx().chain.operator_fee_constant = Some(U256::from(OP_FEE_MOCK_PARAM));
 
-        let mut gas = Gas::new(100);
+        let mut gas = Gas::new(100, false);
         gas.set_spent(10);
         let mut exec_result = FrameResult::Call(CallOutcome::new(
             InterpreterResult {
