@@ -37,6 +37,9 @@ serde = { version = "1.0", default-features = false, features = [
 	"rc",
 ], optional = true }
 
+alloy-rpc-types-trace.workspace = true
+log.workspace = true
+
 [dev-dependencies]
 database.workspace = true
 alloy-eip7702.workspace = true
