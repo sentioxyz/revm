@@ -120,7 +120,7 @@ fn run_custom_precompile<CTX: ContextTr>(
         Ok(output) => {
             let mut interpreter_result = InterpreterResult {
                 result: InstructionResult::Return,
-                gas: Gas::new(gas_limit),
+                gas: Gas::new(gas_limit, context.cfg().sentio_config().ignore_gas_cost()),
                 output: output.bytes,
             };
             let underflow = interpreter_result.gas.record_cost(output.gas_used);
@@ -135,7 +135,7 @@ fn run_custom_precompile<CTX: ContextTr>(
             } else {
                 InstructionResult::PrecompileError
             },
-            gas: Gas::new(gas_limit),
+            gas: Gas::new(gas_limit, context.cfg().sentio_config().ignore_gas_cost()),
             output: Bytes::new(),
         }),
     }

@@ -25,6 +25,9 @@ context-interface.workspace = true
 # optional
 serde = { workspace = true, features = ["derive", "rc"], optional = true }
 
+alloy-rpc-types-trace.workspace = true
+log.workspace = true
+
 [dev-dependencies]
 bincode.workspace = true
 
