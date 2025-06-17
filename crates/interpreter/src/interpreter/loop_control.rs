@@ -21,11 +21,11 @@ pub struct LoopControl {
 }
 
 impl LoopControl {
-    pub fn new(gas_limit: u64) -> Self {
+    pub fn new(gas_limit: u64, ignore_gas_cost: bool) -> Self {
         Self {
             instruction_result: InstructionResult::Continue,
             next_action: InterpreterAction::None,
-            gas: Gas::new(gas_limit),
+            gas: Gas::new(gas_limit, ignore_gas_cost),
         }
     }
 }

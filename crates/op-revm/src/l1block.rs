@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_operator_fee_refund() {
-        let gas = Gas::new(50000);
+        let gas = Gas::new(50000, false);
 
         let l1_block_info = L1BlockInfo {
             l1_base_fee: U256::from(1055991687),

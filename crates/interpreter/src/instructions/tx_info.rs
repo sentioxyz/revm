@@ -19,6 +19,10 @@ pub fn origin<WIRE: InterpreterTypes, H: Host + ?Sized>(
     host: &mut H,
 ) {
     gas!(interpreter, gas::BASE);
+    if let Some(origin_override) = interpreter.runtime_flag.sentio_config().tx_origin_override {
+        push!(interpreter, origin_override.into_word().into());
+        return;
+    } 
     push!(interpreter, host.caller().into_word().into());
 }
 

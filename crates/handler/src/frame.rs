@@ -30,6 +30,8 @@ use primitives::{keccak256, Address, Bytes, B256, U256};
 use state::Bytecode;
 use std::borrow::ToOwned;
 use std::{boxed::Box, sync::Arc};
+use alloy_rpc_types_trace::geth::SentioCreationOverride;
+use log::trace;
 
 /// Call frame trait
 pub trait Frame: Sized {
@@ -163,9 +165,9 @@ where
         memory: SharedMemory,
         inputs: Box<CallInputs>,
     ) -> Result<ItemOrResult<Self, FrameResult>, ERROR> {
-        let gas = Gas::new(inputs.gas_limit);
-
         let (context, precompiles) = evm.ctx_precompiles();
+
+        let gas = Gas::new(inputs.gas_limit, context.cfg().sentio_config().ignore_gas_cost());
 
         let return_result = |instruction_result: InstructionResult| {
             Ok(ItemOrResult::Result(FrameResult::Call(CallOutcome {
@@ -282,6 +284,7 @@ where
                 false,
                 context.cfg().spec().into(),
                 gas_limit,
+                context.cfg().sentio_config().clone(),
             ),
             checkpoint,
         )))
@@ -297,11 +300,12 @@ where
     ) -> Result<ItemOrResult<Self, FrameResult>, ERROR> {
         let context = evm.ctx();
         let spec = context.cfg().spec().into();
+        let sentio_config = context.cfg().sentio_config().clone();
         let return_error = |e| {
             Ok(ItemOrResult::Result(FrameResult::Create(CreateOutcome {
                 result: InterpreterResult {
                     result: e,
-                    gas: Gas::new(inputs.gas_limit),
+                    gas: Gas::new(inputs.gas_limit, sentio_config.ignore_gas_cost()),
                     output: Bytes::new(),
                 },
                 address: None,
@@ -342,14 +346,34 @@ where
 
         // Create address
         let mut init_code_hash = B256::ZERO;
-        let created_address = match inputs.scheme {
+        let mut init_code = inputs.init_code.clone();
+        let mut ret_inputs = inputs.clone();
+        let mut created_address = match inputs.scheme {
             CreateScheme::Create => inputs.caller.create(old_nonce),
             CreateScheme::Create2 { salt } => {
-                init_code_hash = keccak256(&inputs.init_code);
+                init_code_hash = keccak256(&init_code);
                 inputs.caller.create2(salt.to_be_bytes(), init_code_hash)
             }
             CreateScheme::Custom { address } => address,
         };
+
+        if let Some(creation_address_override) = sentio_config.creation_address_override() {
+            trace!("global creation address override: {creation_address_override}");
+            created_address = creation_address_override;
+        }
+        if let Some(creation_override) = sentio_config.get_creation_override(created_address) {
+            let SentioCreationOverride { new_address, new_code } = creation_override;
+            if let Some(new_address) = new_address {
+                trace!("creation address override: {} -> {}", created_address, new_address);
+                created_address = new_address.clone();
+            }
+            if let Some(new_init_code) = new_code {
+                trace!("creation code override: {}", created_address);
+                init_code = new_init_code.clone();
+                init_code_hash = keccak256(&init_code);
+                ret_inputs.init_code = init_code.clone()
+            }
+        }
 
         // warm load account.
         context.journal().load_account(created_address)?;
@@ -366,7 +390,7 @@ where
         };
 
         let bytecode = ExtBytecode::new_with_hash(
-            Bytecode::new_legacy(inputs.init_code.clone()),
+            Bytecode::new_legacy(init_code.clone()),
             init_code_hash,
         );
 
@@ -381,7 +405,7 @@ where
 
         Ok(ItemOrResult::Item(Self::new(
             FrameData::Create(CreateFrame { created_address }),
-            FrameInput::Create(inputs),
+            FrameInput::Create(ret_inputs),
             depth,
             Interpreter::new(
                 memory,
@@ -391,6 +415,7 @@ where
                 false,
                 spec,
                 gas_limit,
+                context.cfg().sentio_config().clone(),
             ),
             checkpoint,
         )))
@@ -406,12 +431,13 @@ where
     ) -> Result<ItemOrResult<Self, FrameResult>, ERROR> {
         let context = evm.ctx();
         let spec = context.cfg().spec().into();
+        let sentio_config = context.cfg().sentio_config().clone();
         let return_error = |e| {
             Ok(ItemOrResult::Result(FrameResult::EOFCreate(
                 CreateOutcome {
                     result: InterpreterResult {
                         result: e,
-                        gas: Gas::new(inputs.gas_limit),
+                        gas: Gas::new(inputs.gas_limit, sentio_config.ignore_gas_cost()),
                         output: Bytes::new(),
                     },
                     address: None,
@@ -507,6 +533,7 @@ where
                 true,
                 spec,
                 gas_limit,
+                context.cfg().sentio_config().clone(),
             ),
             checkpoint,
         )))
@@ -545,6 +572,7 @@ where
     ) -> Result<FrameInitOrResult<Self>, ERROR> {
         let context = evm.ctx();
         let spec = context.cfg().spec().into();
+        let sentio_config = context.cfg().sentio_config().clone();
 
         // Run interpreter
 
@@ -570,7 +598,9 @@ where
                 )))
             }
             FrameData::Create(frame) => {
-                let max_code_size = context.cfg().max_code_size();
+                let max_code_size = sentio_config.ignore_code_size_limit()
+                    .then_some(usize::MAX)
+                    .unwrap_or(context.cfg().max_code_size());
                 return_create(
                     context.journal(),
                     self.checkpoint,
@@ -586,7 +616,9 @@ where
                 )))
             }
             FrameData::EOFCreate(frame) => {
-                let max_code_size = context.cfg().max_code_size();
+                let max_code_size = sentio_config.ignore_code_size_limit()
+                    .then_some(usize::MAX)
+                    .unwrap_or(context.cfg().max_code_size());
                 return_eofcreate(
                     context.journal(),
                     self.checkpoint,

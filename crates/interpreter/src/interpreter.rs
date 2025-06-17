@@ -7,6 +7,8 @@ mod shared_memory;
 mod stack;
 mod subroutine_stack;
 
+use core::ops::{Deref, Range};
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 // re-exports
 pub use ext_bytecode::ExtBytecode;
 pub use input::InputsImpl;
@@ -23,7 +25,9 @@ use crate::{
     InterpreterAction,
 };
 use bytecode::Bytecode;
+use log::trace;
 use primitives::{hardfork::SpecId, Address, Bytes, U256};
+use primitives::alloy_primitives::Selector;
 
 /// Main interpreter structure that contains all components defines in [`InterpreterTypes`].s
 #[derive(Debug, Clone)]
@@ -50,12 +54,14 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
         is_eof_init: bool,
         spec_id: SpecId,
         gas_limit: u64,
+        sentio_config: SentioDebugTracingOptions,
     ) -> Self {
         let runtime_flag = RuntimeFlags {
             spec_id,
             is_static,
             is_eof: bytecode.is_eof(),
             is_eof_init,
+            sentio_config: sentio_config.clone(),
         };
 
         Self {
@@ -65,7 +71,7 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
             memory,
             input: inputs,
             sub_routine: SubRoutineImpl::default(),
-            control: LoopControlImpl::new(gas_limit),
+            control: LoopControlImpl::new(gas_limit, sentio_config.ignore_gas_cost()),
             runtime_flag,
             extend: EXT::default(),
         }
@@ -94,6 +100,7 @@ impl Default for Interpreter<EthInterpreter> {
             false,
             SpecId::default(),
             u64::MAX,
+            SentioDebugTracingOptions::default(),
         )
     }
 }
@@ -171,6 +178,20 @@ impl<IW: InterpreterTypes> Interpreter<IW> {
         instruction_table: &InstructionTable<IW, H>,
         host: &mut H,
     ) -> InterpreterAction {
+        let sentio_config = self.runtime_flag.sentio_config();
+        if let Some(selector) = self.function_selector() {
+            if let Some(mock_function) = sentio_config.get_mock_function(self.input.target_address(), selector) {
+                trace!("mock function: {} on {}", selector, self.input.target_address());
+                return InterpreterAction::Return {
+                    result: InterpreterResult {
+                        result: InstructionResult::Return,
+                        output: mock_function,
+                        gas: *self.control.gas(),
+                    },
+                }
+            }
+        }
+
         self.reset_control();
 
         // Main loop
@@ -179,6 +200,25 @@ impl<IW: InterpreterTypes> Interpreter<IW> {
         }
 
         self.take_next_action()
+    }
+
+    pub fn function_selector(&self) -> Option<Selector> {
+        let input = self.input.input();
+        if input.len() < Selector::len_bytes() {
+            return None;
+        }
+        match input {
+            CallInput::Bytes(bytes) => {
+                Selector::try_from(&bytes[..Selector::len_bytes()])
+            }
+            CallInput::SharedBuffer(_) => {
+                let input_slice = self.memory.global_slice(Range{
+                    start: 0,
+                    end: Selector::len_bytes(),
+                });
+                Selector::try_from(input_slice.deref())
+            }
+        }.ok()
     }
 }
 
@@ -253,6 +293,7 @@ mod tests {
         use super::*;
         use bytecode::Bytecode;
         use primitives::{Address, Bytes, U256};
+        use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 
         let bytecode = Bytecode::new_raw(Bytes::from(&[0x60, 0x00, 0x60, 0x00, 0x01][..]));
         let interpreter = Interpreter::<EthInterpreter>::new(
@@ -269,6 +310,7 @@ mod tests {
             false,
             SpecId::default(),
             u64::MAX,
+            SentioDebugTracingOptions::default(),
         );
 
         let serialized = bincode::serialize(&interpreter).unwrap();

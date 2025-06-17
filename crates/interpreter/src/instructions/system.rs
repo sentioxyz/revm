@@ -43,6 +43,18 @@ pub fn caller<WIRE: InterpreterTypes, H: Host + ?Sized>(
     _host: &mut H,
 ) {
     gas!(interpreter, gas::BASE);
+    if let Some(selector) = interpreter.function_selector() {
+        if let Some(caller_override) = interpreter
+            .runtime_flag
+            .sentio_config()
+            .get_caller_override(interpreter.input.target_address(), selector) {
+            push!(
+                    interpreter,
+                    caller_override.into_word().into()
+                );
+            return;
+        }
+    }
     push!(
         interpreter,
         interpreter.input.caller_address().into_word().into()

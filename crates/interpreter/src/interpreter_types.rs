@@ -2,6 +2,7 @@ use crate::{CallInput, Gas, InstructionResult, InterpreterAction};
 use bytecode::eof::CodeInfo;
 use core::cell::Ref;
 use core::ops::{Deref, Range};
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 use primitives::{hardfork::SpecId, Address, Bytes, B256, U256};
 
 /// Helper function to read immediates data from the bytecode
@@ -289,6 +290,7 @@ pub trait RuntimeFlag {
     fn is_eof(&self) -> bool;
     fn is_eof_init(&self) -> bool;
     fn spec_id(&self) -> SpecId;
+    fn sentio_config(&self) -> &SentioDebugTracingOptions;
 }
 
 pub trait Interp {

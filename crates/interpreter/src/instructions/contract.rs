@@ -439,6 +439,8 @@ pub fn create<WIRE: InterpreterTypes, const IS_CREATE2: bool, H: Host + ?Sized>(
 
     popn!([value, code_offset, len], interpreter);
     let len = as_usize_or_fail!(interpreter, len);
+    
+    let sentio_config = interpreter.runtime_flag.sentio_config();
 
     let mut code = Bytes::new();
     if len != 0 {
@@ -449,7 +451,7 @@ pub fn create<WIRE: InterpreterTypes, const IS_CREATE2: bool, H: Host + ?Sized>(
             .is_enabled_in(SpecId::SHANGHAI)
         {
             // Limit is set as double of max contract bytecode size
-            if len > host.max_initcode_size() {
+            if !sentio_config.ignore_code_size_limit() && len > host.max_initcode_size() {
                 interpreter
                     .control
                     .set_instruction_result(InstructionResult::CreateInitCodeSizeLimit);
