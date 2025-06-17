@@ -1,4 +1,6 @@
 //! This module contains [`CfgEnv`] and implements [`Cfg`] trait for it.
+
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 pub use context_interface::Cfg;
 
 use primitives::{eip170, eip3860, eip7825, hardfork::SpecId};
@@ -118,6 +120,8 @@ pub struct CfgEnv<SPEC = SpecId> {
     /// By default, it is set to `false`.
     #[cfg(feature = "optional_fee_charge")]
     pub disable_fee_charge: bool,
+    /// Sentio config
+    pub sentio_config: SentioDebugTracingOptions,
 }
 
 impl CfgEnv {
@@ -177,6 +181,7 @@ impl<SPEC> CfgEnv<SPEC> {
             disable_priority_fee_check: false,
             #[cfg(feature = "optional_fee_charge")]
             disable_fee_charge: false,
+            sentio_config: SentioDebugTracingOptions::default(),
         }
     }
 
@@ -228,6 +233,7 @@ impl<SPEC> CfgEnv<SPEC> {
             disable_priority_fee_check: self.disable_priority_fee_check,
             #[cfg(feature = "optional_fee_charge")]
             disable_fee_charge: self.disable_fee_charge,
+            sentio_config: self.sentio_config,
         }
     }
 
@@ -409,6 +415,10 @@ impl<SPEC: Into<SpecId> + Copy> Cfg for CfgEnv<SPEC> {
                 u64::MAX
             }
         }
+    }
+
+    fn sentio_config(&self) -> &SentioDebugTracingOptions {
+        &self.sentio_config
     }
 }
 

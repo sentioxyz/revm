@@ -18,17 +18,20 @@ pub struct Gas {
     refunded: i64,
     /// Memoisation of values for memory expansion cost.
     memory: MemoryGas,
+    /// Shall set all gas costs to zero.
+    ignore_gas_cost: bool,
 }
 
 impl Gas {
     /// Creates a new `Gas` struct with the given gas limit.
     #[inline]
-    pub const fn new(limit: u64) -> Self {
+    pub const fn new(limit: u64, ignore_gas_cost: bool) -> Self {
         Self {
             limit,
             remaining: limit,
             refunded: 0,
             memory: MemoryGas::new(),
+            ignore_gas_cost,
         }
     }
 
@@ -40,6 +43,7 @@ impl Gas {
             remaining: 0,
             refunded: 0,
             memory: MemoryGas::new(),
+            ignore_gas_cost: false,
         }
     }
 
@@ -93,6 +97,9 @@ impl Gas {
 
     /// Return remaining gas after subtracting 63/64 parts.
     pub const fn remaining_63_of_64_parts(&self) -> u64 {
+        if self.ignore_gas_cost {
+            return self.remaining;
+        }
         self.remaining - self.remaining / 64
     }
 
@@ -137,6 +144,9 @@ impl Gas {
     /// Set a spent value. This overrides the current spent value.
     #[inline]
     pub fn set_spent(&mut self, spent: u64) {
+        if self.ignore_gas_cost {
+            return
+        }
         self.remaining = self.limit.saturating_sub(spent);
     }
 
@@ -146,6 +156,9 @@ impl Gas {
     #[inline]
     #[must_use = "prefer using `gas!` instead to return an out-of-gas error on failure"]
     pub fn record_cost(&mut self, cost: u64) -> bool {
+        if self.ignore_gas_cost {
+            return true;
+        }
         if let Some(new_remaining) = self.remaining.checked_sub(cost) {
             self.remaining = new_remaining;
             return true;

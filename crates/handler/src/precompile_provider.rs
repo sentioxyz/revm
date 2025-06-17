@@ -98,7 +98,7 @@ impl<CTX: ContextTr> PrecompileProvider<CTX> for EthPrecompiles {
 
         let mut result = InterpreterResult {
             result: InstructionResult::Return,
-            gas: Gas::new(inputs.gas_limit),
+            gas: Gas::new(inputs.gas_limit, context.cfg().sentio_config().ignore_gas_cost()),
             output: Bytes::new(),
         };
 
