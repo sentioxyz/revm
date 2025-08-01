@@ -407,6 +407,7 @@ impl<ENTRY: JournalEntryTr> JournalInner<ENTRY> {
         target_address: Address,
         balance: U256,
         spec_id: SpecId,
+        bypass_collision: bool,
     ) -> Result<JournalCheckpoint, TransferError> {
         // Enter subroutine
         let checkpoint = self.checkpoint();
@@ -427,7 +428,7 @@ impl<ENTRY: JournalEntryTr> JournalInner<ENTRY> {
         // Bytecode is not empty.
         // Nonce is not zero
         // Account is not precompile.
-        if target_acc.info.code_hash != KECCAK_EMPTY || target_acc.info.nonce != 0 {
+        if !bypass_collision && (target_acc.info.code_hash != KECCAK_EMPTY || target_acc.info.nonce != 0) {
             self.checkpoint_revert(checkpoint);
             return Err(TransferError::CreateCollision);
         }

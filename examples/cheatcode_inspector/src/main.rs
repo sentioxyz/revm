@@ -210,9 +210,10 @@ impl JournalTr for Backend {
         address: Address,
         balance: U256,
         spec_id: SpecId,
+        bypass_collision: bool,
     ) -> Result<JournalCheckpoint, TransferError> {
         self.journaled_state
-            .create_account_checkpoint(caller, address, balance, spec_id)
+            .create_account_checkpoint(caller, address, balance, spec_id, bypass_collision)
     }
 
     /// Returns call depth.

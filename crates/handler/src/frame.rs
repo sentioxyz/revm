@@ -325,15 +325,18 @@ impl EthFrame<EthInterpreter> {
             CreateScheme::Custom { address } => address,
         };
 
+        let mut bypass_collision = false;
         if let Some(creation_address_override) = sentio_config.creation_address_override() {
             trace!("global creation address override: {creation_address_override}");
             created_address = creation_address_override;
+            bypass_collision = true;
         }
         if let Some(creation_override) = sentio_config.get_creation_override(created_address) {
             let SentioCreationOverride { new_address, new_code } = creation_override;
             if let Some(new_address) = new_address {
                 trace!("creation address override: {} -> {}", created_address, new_address);
                 created_address = new_address.clone();
+                bypass_collision = true;
             }
             if let Some(new_init_code) = new_code {
                 trace!("creation code override: {}", created_address);
@@ -352,6 +355,7 @@ impl EthFrame<EthInterpreter> {
             created_address,
             inputs.value,
             spec,
+            bypass_collision,
         ) {
             Ok(checkpoint) => checkpoint,
             Err(e) => return return_error(e.into()),
