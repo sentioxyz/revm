@@ -198,6 +198,7 @@ pub trait JournalTr {
         address: Address,
         balance: U256,
         spec_id: SpecId,
+        bypass_collision: bool,
     ) -> Result<JournalCheckpoint, TransferError>;
 
     /// Returns the depth of the journal.
