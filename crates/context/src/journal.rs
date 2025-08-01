@@ -270,10 +270,11 @@ impl<DB: Database, ENTRY: JournalEntryTr> JournalTr for Journal<DB, ENTRY> {
         address: Address,
         balance: U256,
         spec_id: SpecId,
+        bypass_collision: bool,
     ) -> Result<JournalCheckpoint, TransferError> {
         // Ignore error.
         self.inner
-            .create_account_checkpoint(caller, address, balance, spec_id)
+            .create_account_checkpoint(caller, address, balance, spec_id, bypass_collision)
     }
 
     #[inline]
