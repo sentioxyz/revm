@@ -502,6 +502,7 @@ fn test_mstore_big_offset_memory_oog() {
         false,
         SpecId::default(),
         1000,
+        SentioDebugTracingOptions::default(),
     );
 
     let table = instruction_table::<EthInterpreter, DummyHost>();
