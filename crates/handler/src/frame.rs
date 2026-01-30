@@ -26,6 +26,8 @@ use primitives::{
 };
 use state::Bytecode;
 use std::{borrow::ToOwned, boxed::Box, vec::Vec};
+use alloy_rpc_types_trace::geth::{SentioCreationOverride, SentioDebugTracingOptions};
+use log::trace;
 
 /// Frame implementation for Ethereum.
 #[derive_where(Clone, Debug; IW,
@@ -113,6 +115,7 @@ impl EthFrame<EthInterpreter> {
         spec_id: SpecId,
         gas_limit: u64,
         checkpoint: JournalCheckpoint,
+        sentio_config: SentioDebugTracingOptions,
     ) {
         let Self {
             data: data_ref,
@@ -126,7 +129,7 @@ impl EthFrame<EthInterpreter> {
         *input_ref = input;
         *depth_ref = depth;
         *is_finished_ref = false;
-        interpreter.clear(memory, bytecode, inputs, is_static, spec_id, gas_limit);
+        interpreter.clear(memory, bytecode, inputs, is_static, spec_id, gas_limit, sentio_config);
         *checkpoint_ref = checkpoint;
     }
 
@@ -144,7 +147,7 @@ impl EthFrame<EthInterpreter> {
         memory: SharedMemory,
         inputs: Box<CallInputs>,
     ) -> Result<ItemOrResult<FrameToken, FrameResult>, ERROR> {
-        let gas = Gas::new(inputs.gas_limit);
+        let gas = Gas::new(inputs.gas_limit, ctx.cfg().sentio_config().ignore_gas_cost());
         let return_result = |instruction_result: InstructionResult| {
             Ok(ItemOrResult::Result(FrameResult::Call(CallOutcome {
                 result: InterpreterResult {
@@ -242,6 +245,7 @@ impl EthFrame<EthInterpreter> {
             ctx.cfg().spec().into(),
             gas_limit,
             checkpoint,
+            ctx.cfg().sentio_config().clone(),
         );
         Ok(ItemOrResult::Item(this.consume()))
     }
@@ -259,11 +263,12 @@ impl EthFrame<EthInterpreter> {
         inputs: Box<CreateInputs>,
     ) -> Result<ItemOrResult<FrameToken, FrameResult>, ERROR> {
         let spec = context.cfg().spec().into();
+        let sentio_config = context.cfg().sentio_config().clone();
         let return_error = |e| {
             Ok(ItemOrResult::Result(FrameResult::Create(CreateOutcome {
                 result: InterpreterResult {
                     result: e,
-                    gas: Gas::new(inputs.gas_limit()),
+                    gas: Gas::new(inputs.gas_limit(), sentio_config.ignore_gas_cost()),
                     output: Bytes::new(),
                 },
                 address: None,
@@ -293,7 +298,9 @@ impl EthFrame<EthInterpreter> {
 
         // Create address
         let mut init_code_hash = None;
-        let created_address = match inputs.scheme() {
+        let mut init_code = inputs.init_code().clone();
+        let mut ret_inputs = inputs.clone();
+        let mut created_address = match inputs.scheme() {
             CreateScheme::Create => inputs.caller().create(old_nonce),
             CreateScheme::Create2 { salt } => {
                 let init_code_hash = *init_code_hash.insert(keccak256(inputs.init_code()));
@@ -301,6 +308,27 @@ impl EthFrame<EthInterpreter> {
             }
             CreateScheme::Custom { address } => address,
         };
+
+        let mut bypass_collision = false;
+        if let Some(creation_address_override) = sentio_config.creation_address_override() {
+            trace!("global creation address override: {creation_address_override}");
+            created_address = creation_address_override;
+            bypass_collision = true;
+        }
+        if let Some(creation_override) = sentio_config.get_creation_override(created_address) {
+            let SentioCreationOverride { new_address, new_code } = creation_override;
+            if let Some(new_address) = new_address {
+                trace!("creation address override: {} -> {}", created_address, new_address);
+                created_address = new_address.clone();
+                bypass_collision = true;
+            }
+            if let Some(new_init_code) = new_code {
+                trace!("creation code override: {}", created_address);
+                init_code = new_init_code.clone();
+                init_code_hash = Some(keccak256(&init_code));
+                ret_inputs.set_init_code(init_code.clone());
+            }
+        }
 
         drop(caller_info); // Drop caller info to avoid borrow checker issues.
 
@@ -313,13 +341,14 @@ impl EthFrame<EthInterpreter> {
             created_address,
             inputs.value(),
             spec,
+            bypass_collision,
         ) {
             Ok(checkpoint) => checkpoint,
             Err(e) => return return_error(e.into()),
         };
 
         let bytecode = ExtBytecode::new_with_optional_hash(
-            Bytecode::new_legacy(inputs.init_code().clone()),
+            Bytecode::new_legacy(init_code.clone()),
             init_code_hash,
         );
 
@@ -334,7 +363,7 @@ impl EthFrame<EthInterpreter> {
 
         this.get(EthFrame::invalid).clear(
             FrameData::Create(CreateFrame { created_address }),
-            FrameInput::Create(inputs),
+            FrameInput::Create(ret_inputs),
             depth,
             memory,
             bytecode,
@@ -343,6 +372,7 @@ impl EthFrame<EthInterpreter> {
             spec,
             gas_limit,
             checkpoint,
+            context.cfg().sentio_config().clone(),
         );
         Ok(ItemOrResult::Item(this.consume()))
     }
@@ -388,7 +418,6 @@ impl EthFrame<EthInterpreter> {
         next_action: InterpreterAction,
     ) -> Result<FrameInitOrResult<Self>, ERROR> {
         // Run interpreter
-
         let mut interpreter_result = match next_action {
             InterpreterAction::NewFrame(frame_input) => {
                 let depth = self.depth + 1;
@@ -536,7 +565,10 @@ pub fn return_create<JOURNAL: JournalTr, CFG: Cfg>(
     interpreter_result: &mut InterpreterResult,
     address: Address,
 ) {
-    let max_code_size = cfg.max_code_size();
+    let sentio_config = cfg.sentio_config().clone();
+    let max_code_size = sentio_config.ignore_code_size_limit()
+        .then_some(usize::MAX)
+        .unwrap_or(cfg.max_code_size());
     let is_eip3541_disabled = cfg.is_eip3541_disabled();
     let spec_id = cfg.spec().into();
 
