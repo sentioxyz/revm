@@ -21,6 +21,8 @@ pub struct Gas {
     tracker: GasTracker,
     /// Memoisation of values for memory expansion cost.
     memory: MemoryGas,
+    /// Shall set all gas costs to zero.
+    ignore_gas_cost: bool,
 }
 
 impl Gas {
@@ -28,10 +30,11 @@ impl Gas {
     ///
     /// Sets `reservoir = 0` so all gas is regular gas (standard mainnet behavior).
     #[inline]
-    pub const fn new(limit: u64) -> Self {
+    pub const fn new(limit: u64, ignore_gas_cost: bool) -> Self {
         Self {
             tracker: GasTracker::new(limit, limit, 0),
             memory: MemoryGas::new(),
+            ignore_gas_cost,
         }
     }
 
@@ -62,6 +65,7 @@ impl Gas {
         Self {
             tracker: GasTracker::new(limit, limit, reservoir),
             memory: MemoryGas::new(),
+            ignore_gas_cost: false,
         }
     }
 
@@ -71,6 +75,7 @@ impl Gas {
         Self {
             tracker: GasTracker::new(limit, 0, 0),
             memory: MemoryGas::new(),
+            ignore_gas_cost: false,
         }
     }
 
@@ -219,6 +224,9 @@ impl Gas {
     /// Set a spent value. This overrides the current spent value.
     #[inline]
     pub fn set_spent(&mut self, spent: u64) {
+        if self.ignore_gas_cost {
+            return;
+        }
         self.tracker
             .set_remaining(self.tracker.limit().saturating_sub(spent));
     }
@@ -234,6 +242,9 @@ impl Gas {
     #[must_use = "prefer using `gas!` instead to return an out-of-gas error on failure"]
     #[deprecated(since = "32.0.0", note = "use record_regular_cost instead")]
     pub fn record_cost(&mut self, cost: u64) -> bool {
+        if self.ignore_gas_cost {
+            return true;
+        }
         self.record_regular_cost(cost)
     }
 
@@ -261,6 +272,9 @@ impl Gas {
     #[inline]
     #[must_use = "In case of not enough gas, the interpreter should halt with an out-of-gas error"]
     pub fn record_state_cost(&mut self, cost: u64) -> bool {
+        if self.ignore_gas_cost {
+            return true;
+        }
         self.tracker.record_state_cost(cost)
     }
 
@@ -270,6 +284,9 @@ impl Gas {
     #[inline]
     #[must_use = "In case of not enough gas, the interpreter should halt with an out-of-gas error"]
     pub fn record_regular_cost(&mut self, cost: u64) -> bool {
+        if self.ignore_gas_cost {
+            return true;
+        }
         self.tracker.record_regular_cost(cost)
     }
 }

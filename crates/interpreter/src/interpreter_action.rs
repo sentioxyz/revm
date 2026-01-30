@@ -161,7 +161,7 @@ impl InterpreterAction {
         Self::Return(InterpreterResult::new(
             InstructionResult::Stop,
             Bytes::new(),
-            Gas::new(0),
+            Gas::new(0, false),
         ))
     }
 }
