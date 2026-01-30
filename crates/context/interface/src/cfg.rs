@@ -7,6 +7,7 @@ pub use gas_params::{GasId, GasParams};
 
 use auto_impl::auto_impl;
 use core::{fmt::Debug, hash::Hash};
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 use primitives::{hardfork::SpecId, Address, TxKind, U256};
 
 /// Configuration for the EVM.
@@ -75,6 +76,8 @@ pub trait Cfg {
 
     /// Returns the gas params for the EVM.
     fn gas_params(&self) -> &GasParams;
+
+    fn sentio_config(&self) -> &SentioDebugTracingOptions;
 }
 
 /// What bytecode analysis to perform

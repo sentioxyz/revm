@@ -1,4 +1,6 @@
 //! This module contains [`CfgEnv`] and implements [`Cfg`] trait for it.
+
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 pub use context_interface::Cfg;
 
 use context_interface::cfg::GasParams;
@@ -130,6 +132,8 @@ pub struct CfgEnv<SPEC = SpecId> {
     /// By default, it is set to `false`.
     #[cfg(feature = "optional_fee_charge")]
     pub disable_fee_charge: bool,
+    /// Sentio config
+    pub sentio_config: SentioDebugTracingOptions,
 }
 
 impl CfgEnv {
@@ -171,6 +175,7 @@ impl<SPEC> CfgEnv<SPEC> {
             disable_priority_fee_check: false,
             #[cfg(feature = "optional_fee_charge")]
             disable_fee_charge: false,
+            sentio_config: SentioDebugTracingOptions::default(),
         }
     }
 
@@ -273,6 +278,7 @@ impl<SPEC> CfgEnv<SPEC> {
             disable_priority_fee_check: self.disable_priority_fee_check,
             #[cfg(feature = "optional_fee_charge")]
             disable_fee_charge: self.disable_fee_charge,
+            sentio_config: SentioDebugTracingOptions::default(),
         }
     }
 
@@ -365,11 +371,6 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
     }
 
     #[inline]
-    fn spec(&self) -> Self::Spec {
-        self.spec.clone()
-    }
-
-    #[inline]
     fn tx_chain_id_check(&self) -> bool {
         self.tx_chain_id_check
     }
@@ -382,6 +383,11 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
             } else {
                 u64::MAX
             })
+    }
+
+    #[inline]
+    fn spec(&self) -> Self::Spec {
+        self.spec.clone()
     }
 
     #[inline]
@@ -403,20 +409,20 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
             .unwrap_or(eip3860::MAX_INITCODE_SIZE)
     }
 
-    fn is_eip3541_disabled(&self) -> bool {
+    fn is_eip3607_disabled(&self) -> bool {
         cfg_if::cfg_if! {
-            if #[cfg(feature = "optional_eip3541")] {
-                self.disable_eip3541
+            if #[cfg(feature = "optional_eip3607")] {
+                self.disable_eip3607
             } else {
                 false
             }
         }
     }
 
-    fn is_eip3607_disabled(&self) -> bool {
+    fn is_eip3541_disabled(&self) -> bool {
         cfg_if::cfg_if! {
-            if #[cfg(feature = "optional_eip3607")] {
-                self.disable_eip3607
+            if #[cfg(feature = "optional_eip3541")] {
+                self.disable_eip3541
             } else {
                 false
             }
@@ -501,6 +507,10 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
     #[inline]
     fn gas_params(&self) -> &GasParams {
         &self.gas_params
+    }
+
+    fn sentio_config(&self) -> &SentioDebugTracingOptions {
+        &self.sentio_config
     }
 }
 
