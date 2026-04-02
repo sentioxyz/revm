@@ -128,7 +128,7 @@ thiserror = { version = "2.0", default-features = false }
 triehash = "0.8"
 walkdir = "2.5"
 
-alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.4.3" }
+alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.6.3" }
 log = "0.4.27"
 
 [workspace.package]
