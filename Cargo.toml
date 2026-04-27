@@ -128,8 +128,11 @@ thiserror = { version = "2.0", default-features = false }
 triehash = "0.8"
 walkdir = "2.5"
 
-alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.6.3" }
+alloy-rpc-types-trace = { version = "1.6.3", default-features = false }
 log = "0.4.27"
+
+[patch.crates-io]
+alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.6.3" }
 
 [workspace.package]
 license = "MIT"
