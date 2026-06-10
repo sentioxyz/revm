@@ -7,6 +7,7 @@ pub use gas_params::{GasId, GasParams};
 
 use auto_impl::auto_impl;
 use core::{fmt::Debug, hash::Hash};
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 use primitives::{hardfork::SpecId, Address, TxKind, U256};
 
 /// Configuration for the EVM.
@@ -94,6 +95,9 @@ pub trait Cfg {
     /// via the reservoir model. EIP-8037 specifies concrete gas values based on
     /// `cost_per_state_byte` and adds a hash cost for deployed bytecode.
     fn is_amsterdam_eip8037_enabled(&self) -> bool;
+
+    /// Returns the Sentio tracer config.
+    fn sentio_config(&self) -> &SentioDebugTracingOptions;
 }
 
 /// What bytecode analysis to perform
