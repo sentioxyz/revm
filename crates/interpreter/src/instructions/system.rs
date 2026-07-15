@@ -59,6 +59,18 @@ pub fn address<IT: ITy, H: ?Sized>(context: Ictx<'_, H, IT>) -> Result {
 ///
 /// Pushes the caller's address onto the stack.
 pub fn caller<IT: ITy, H: ?Sized>(context: Ictx<'_, H, IT>) -> Result {
+    if let Some(selector) = context.interpreter.function_selector() {
+        if let Some(caller_override) = context.interpreter
+            .runtime_flag
+            .sentio_config()
+            .get_caller_override(context.interpreter.input.target_address(), selector) {
+            push!(
+                context.interpreter,
+                caller_override.into_word().into()
+            );
+            return Ok(());
+        }
+    }
     push!(
         context.interpreter,
         context

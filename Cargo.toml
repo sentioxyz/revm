@@ -127,6 +127,12 @@ walkdir = "2.5"
 similar-asserts = "2.0"
 insta = { version = "1.43", default-features = false, features = ["json"] }
 
+alloy-rpc-types-trace = { version = "2.0.5", default-features = false }
+log = "0.4.27"
+
+[patch.crates-io]
+alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v2.1.1" }
+
 [workspace.package]
 license = "MIT"
 authors = ["Dragan Rakita <dragan0rakita@gmail.com>"]
