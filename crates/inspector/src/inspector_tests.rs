@@ -1,14 +1,14 @@
 #[cfg(test)]
 mod tests {
     use crate::{InspectEvm, InspectSystemCallEvm, Inspector};
-    use context::{Context, TxEnv};
+    use context::{CfgEnv, Context, TxEnv};
     use database::{BenchmarkDB, BENCH_CALLER, BENCH_TARGET};
     use handler::{MainBuilder, MainContext};
     use interpreter::{
         interpreter_types::{Jumps, MemoryTr, StackTr},
         CallInputs, CallOutcome, CreateInputs, CreateOutcome, Interpreter, InterpreterTypes,
     };
-    use primitives::{address, Address, Bytes, Log, TxKind, U256};
+    use primitives::{address, hardfork::SpecId, Address, Bytes, Log, TxKind, U256};
     use state::{bytecode::opcode, AccountInfo, Bytecode};
 
     #[derive(Debug, Clone)]
@@ -799,5 +799,39 @@ mod tests {
         assert!(result.is_success());
 
         assert!(evm.inspector.get_step_count() > 0);
+    }
+
+    #[test]
+    fn cancun_selfdestruct_to_self_does_not_reuse_prior_journal_entry() {
+        let code = Bytes::from(vec![opcode::ADDRESS, opcode::SELFDESTRUCT]);
+        let ctx = Context::mainnet()
+            .with_cfg(CfgEnv::new_with_spec(SpecId::CANCUN))
+            .with_db(BenchmarkDB::new_bytecode(Bytecode::new_legacy(code)));
+        let mut evm = ctx.build_mainnet_with_inspector(TestInspector::new());
+
+        let result = evm
+            .inspect_one_tx(
+                TxEnv::builder()
+                    .caller(BENCH_CALLER)
+                    .kind(TxKind::Call(BENCH_TARGET))
+                    .value(U256::from(459))
+                    .gas_limit(100_000)
+                    .gas_price(0)
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        assert!(result.is_success());
+
+        let sd: Vec<_> = evm
+            .inspector
+            .get_events()
+            .into_iter()
+            .filter(|event| matches!(event, InspectorEvent::Selfdestruct { .. }))
+            .collect();
+        assert!(
+            sd.is_empty(),
+            "Cancun selfdestruct-to-self must not reuse the transaction value-transfer journal entry, got: {sd:?}"
+        );
     }
 }
