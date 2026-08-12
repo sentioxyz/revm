@@ -39,6 +39,8 @@ pub fn create<const IS_CREATE2: bool, IT: ITy, H: Host + ?Sized>(
     popn!([value, code_offset, len], context.interpreter);
     let len = as_usize_or_fail!(context.interpreter, len);
 
+    let sentio_config = context.interpreter.runtime_flag.sentio_config();
+
     let mut code = Bytes::new();
     if len != 0 {
         // EIP-3860: Limit and meter initcode
@@ -49,7 +51,7 @@ pub fn create<const IS_CREATE2: bool, IT: ITy, H: Host + ?Sized>(
             .is_enabled_in(SpecId::SHANGHAI)
         {
             // Limit is set as double of max contract bytecode size
-            if len > context.host.max_initcode_size() {
+            if !sentio_config.ignore_code_size_limit() && len > context.host.max_initcode_size() {
                 return Err(InstructionResult::CreateInitCodeSizeLimit);
             }
             gas!(

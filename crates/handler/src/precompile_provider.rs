@@ -103,7 +103,7 @@ pub fn precompile_output_to_interpreter_result(
     // Gas used, refund, state gas (with its spilled portion, so a later rollback
     // credits it back to regular gas per EIP-8037) and the reservoir all come from
     // the precompile's own accounting.
-    let mut gas = Gas::new(gas_limit);
+    let mut gas = Gas::new(gas_limit, false);
     *gas.tracker_mut() = output.to_gas_tracker(gas_limit);
 
     // Only a success or revert returns output bytes and keeps its unspent gas.
@@ -157,7 +157,12 @@ impl<CTX: ContextTr> PrecompileProvider<CTX> for EthPrecompiles {
             }
         }
 
-        let result = precompile_output_to_interpreter_result(output, inputs.gas_limit);
+        let mut result = precompile_output_to_interpreter_result(output, inputs.gas_limit);
+        // Sentio: when ignore_gas_cost is set, replace the result gas with a no-op tracker
+        // so subsequent record_cost calls are short-circuited.
+        if context.cfg().sentio_config().ignore_gas_cost() {
+            result.gas = Gas::new(inputs.gas_limit, true);
+        }
         Ok(Some(result))
     }
 
