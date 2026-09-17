@@ -52,6 +52,7 @@ fn read_slice_oob_via_new_analyzed() {
         false,
         SpecId::PRAGUE,
         u64::MAX,
+        alloy_rpc_types_trace::geth::SentioDebugTracingOptions::default(),
     );
 
     let table = instruction_table::<EthInterpreter, DummyHost>();

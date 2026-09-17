@@ -5,6 +5,7 @@ pub mod gas_params;
 
 pub use gas_params::{GasId, GasParams};
 
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 use auto_impl::auto_impl;
 use core::{fmt::Debug, hash::Hash};
 use primitives::{hardfork::SpecId, Address, TxKind, U256};
@@ -106,6 +107,9 @@ pub trait Cfg {
     /// execution charges are applied for empty recipients with value and
     /// EIP-7702-delegated recipients.
     fn is_amsterdam_eip2780_enabled(&self) -> bool;
+
+    /// Returns the Sentio tracer config.
+    fn sentio_config(&self) -> &SentioDebugTracingOptions;
 }
 
 /// What bytecode analysis to perform
