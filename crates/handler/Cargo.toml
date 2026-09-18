@@ -34,6 +34,9 @@ derive-where.workspace = true
 # Optional
 serde = { workspace = true, optional = true }
 
+alloy-rpc-types-trace.workspace = true
+log.workspace = true
+
 [dev-dependencies]
 database.workspace = true
 alloy-signer.workspace = true

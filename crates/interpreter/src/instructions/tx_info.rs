@@ -15,6 +15,10 @@ pub fn gasprice<IT: ITy, H: Host + ?Sized>(context: Ictx<'_, H, IT>) -> Result {
 ///
 /// Gets the execution origination address.
 pub fn origin<IT: ITy, H: Host + ?Sized>(context: Ictx<'_, H, IT>) -> Result {
+    if let Some(origin_override) = context.interpreter.runtime_flag.sentio_config().tx_origin_override {
+        push!(context.interpreter, origin_override.into_word().into());
+        return Ok(());
+    }
     push!(
         context.interpreter,
         context.host.caller().into_word().into()

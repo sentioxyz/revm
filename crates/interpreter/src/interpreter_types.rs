@@ -3,6 +3,7 @@ use core::{
     cell::Ref,
     ops::{Deref, Range},
 };
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 use primitives::{hardfork::SpecId, Address, Bytes, B256, U256};
 
 /// Helper function to read immediates data from the bytecode
@@ -287,6 +288,7 @@ pub trait RuntimeFlag {
     fn is_static(&self) -> bool;
     /// Returns the current EVM specification ID.
     fn spec_id(&self) -> SpecId;
+    fn sentio_config(&self) -> &SentioDebugTracingOptions;
 }
 
 /// Trait for interpreter execution.

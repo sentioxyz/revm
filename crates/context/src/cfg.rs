@@ -1,4 +1,6 @@
 //! This module contains [`CfgEnv`] and implements [`Cfg`] trait for it.
+
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
 pub use context_interface::Cfg;
 
 use context_interface::cfg::GasParams;
@@ -165,6 +167,8 @@ pub struct CfgEnv<SPEC = SpecId> {
     ///
     /// [EIP-8246]: https://eips.ethereum.org/EIPS/eip-8246
     pub amsterdam_eip8246_delayed_clear_disabled: bool,
+    /// Sentio config
+    pub sentio_config: SentioDebugTracingOptions,
 }
 
 impl CfgEnv {
@@ -284,6 +288,7 @@ impl<SPEC> CfgEnv<SPEC> {
             enable_amsterdam_eip2780: self.enable_amsterdam_eip2780,
             amsterdam_eip7708_disabled: self.amsterdam_eip7708_disabled,
             amsterdam_eip8246_delayed_clear_disabled: self.amsterdam_eip8246_delayed_clear_disabled,
+            sentio_config: SentioDebugTracingOptions::default(),
         }
     }
 
@@ -375,6 +380,7 @@ impl<SPEC: Into<SpecId> + Clone> CfgEnv<SPEC> {
             enable_amsterdam_eip2780: is_amsterdam,
             amsterdam_eip7708_disabled: false,
             amsterdam_eip8246_delayed_clear_disabled: false,
+            sentio_config: SentioDebugTracingOptions::default(),
         }
     }
 
@@ -435,11 +441,6 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
     }
 
     #[inline]
-    fn spec(&self) -> Self::Spec {
-        self.spec.clone()
-    }
-
-    #[inline]
     fn tx_chain_id_check(&self) -> bool {
         self.tx_chain_id_check
     }
@@ -452,6 +453,11 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
             } else {
                 u64::MAX
             })
+    }
+
+    #[inline]
+    fn spec(&self) -> Self::Spec {
+        self.spec.clone()
     }
 
     #[inline]
@@ -484,20 +490,20 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
             )
     }
 
-    fn is_eip3541_disabled(&self) -> bool {
+    fn is_eip3607_disabled(&self) -> bool {
         cfg_if::cfg_if! {
-            if #[cfg(feature = "optional_eip3541")] {
-                self.disable_eip3541
+            if #[cfg(feature = "optional_eip3607")] {
+                self.disable_eip3607
             } else {
                 false
             }
         }
     }
 
-    fn is_eip3607_disabled(&self) -> bool {
+    fn is_eip3541_disabled(&self) -> bool {
         cfg_if::cfg_if! {
-            if #[cfg(feature = "optional_eip3607")] {
-                self.disable_eip3607
+            if #[cfg(feature = "optional_eip3541")] {
+                self.disable_eip3541
             } else {
                 false
             }
@@ -598,6 +604,10 @@ impl<SPEC: Into<SpecId> + Clone> Cfg for CfgEnv<SPEC> {
 
     fn is_amsterdam_eip2780_enabled(&self) -> bool {
         self.enable_amsterdam_eip2780
+    }
+
+    fn sentio_config(&self) -> &SentioDebugTracingOptions {
+        &self.sentio_config
     }
 }
 

@@ -8,6 +8,9 @@ mod runtime_flags;
 mod shared_memory;
 mod stack;
 
+use core::ops::{Deref, Range};
+use alloy_rpc_types_trace::geth::SentioDebugTracingOptions;
+use log::trace;
 // re-exports
 pub use ext_bytecode::ExtBytecode;
 pub use input::InputsImpl;
@@ -18,12 +21,13 @@ pub use stack::{Stack, STACK_LIMIT};
 
 // imports
 use crate::{
-    instruction_context::InstructionContext, interpreter_types::*, Gas, GasTable, Host,
+    instruction_context::InstructionContext, interpreter_types::*, CallInput, Gas, GasTable, Host,
     InstructionExecResult, InstructionResult, InstructionTable, InterpreterAction,
 };
 use bytecode::Bytecode;
 use context_interface::{cfg::GasParams, host::LoadError};
 use primitives::{hardfork::SpecId, hints_util::cold_path, Bytes};
+use primitives::alloy_primitives::Selector;
 
 /// Main interpreter structure that contains all components defined in [`InterpreterTypes`].
 #[derive(Debug, Clone)]
@@ -56,6 +60,7 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
         is_static: bool,
         spec_id: SpecId,
         gas_limit: u64,
+        sentio_config: SentioDebugTracingOptions,
     ) -> Self {
         Self::new_inner(
             Stack::new(),
@@ -65,6 +70,7 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
             is_static,
             spec_id,
             gas_limit,
+            sentio_config,
         )
     }
 
@@ -87,6 +93,7 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
             false,
             SpecId::default(),
             u64::MAX,
+            SentioDebugTracingOptions::default(),
         )
     }
 
@@ -98,15 +105,16 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
         is_static: bool,
         spec_id: SpecId,
         gas_limit: u64,
+        sentio_config: SentioDebugTracingOptions,
     ) -> Self {
         Self {
             bytecode,
-            gas: Gas::new(gas_limit),
+            gas: Gas::new(gas_limit, sentio_config.ignore_gas_cost()),
             stack,
             return_data: Default::default(),
             memory,
             input,
-            runtime_flag: RuntimeFlags { is_static, spec_id },
+            runtime_flag: RuntimeFlags { is_static, spec_id, sentio_config: sentio_config.clone() },
             extend: Default::default(),
         }
     }
@@ -123,6 +131,7 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
         spec_id: SpecId,
         gas_limit: u64,
         reservoir_remaining_gas: u64,
+        sentio_config: SentioDebugTracingOptions,
     ) {
         let Self {
             bytecode: bytecode_ref,
@@ -135,7 +144,11 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
             extend,
         } = self;
         *bytecode_ref = bytecode;
-        *gas = Gas::new_with_regular_gas_and_reservoir(gas_limit, reservoir_remaining_gas);
+        *gas = if sentio_config.ignore_gas_cost() {
+            Gas::new(gas_limit, true)
+        } else {
+            Gas::new_with_regular_gas_and_reservoir(gas_limit, reservoir_remaining_gas)
+        };
         if stack.data().capacity() == 0 {
             *stack = Stack::new();
         } else {
@@ -144,7 +157,7 @@ impl<EXT: Default> Interpreter<EthInterpreter<EXT>> {
         return_data.0.clear();
         *memory_ref = memory;
         *input_ref = input;
-        *runtime_flag = RuntimeFlags { spec_id, is_static };
+        *runtime_flag = RuntimeFlags { spec_id, is_static, sentio_config };
         *extend = EXT::default();
     }
 
@@ -328,6 +341,18 @@ impl<IW: InterpreterTypes> Interpreter<IW> {
         gas_table: &GasTable,
         host: &mut H,
     ) -> InterpreterAction {
+        let sentio_config = self.runtime_flag.sentio_config();
+        if let Some(selector) = self.function_selector() {
+            if let Some(mock_function) = sentio_config.get_mock_function(self.input.target_address(), selector) {
+                trace!("mock function: {} on {}", selector, self.input.target_address());
+                return InterpreterAction::Return(InterpreterResult {
+                    result: InstructionResult::Return,
+                    output: mock_function,
+                    gas: self.gas,
+                });
+            }
+        }
+
         let e = loop {
             if let Err(e) = self.step(instruction_table, gas_table, host) {
                 cold_path();
@@ -339,6 +364,25 @@ impl<IW: InterpreterTypes> Interpreter<IW> {
         }
         debug_assert!(self.bytecode.is_end());
         self.take_next_action()
+    }
+
+    pub fn function_selector(&self) -> Option<Selector> {
+        let input = self.input.input();
+        if input.len() < Selector::len_bytes() {
+            return None;
+        }
+        match input {
+            CallInput::Bytes(bytes) => {
+                Selector::try_from(&bytes[..Selector::len_bytes()])
+            }
+            CallInput::SharedBuffer(_) => {
+                let input_slice = self.memory.global_slice(Range{
+                    start: 0,
+                    end: Selector::len_bytes(),
+                });
+                Selector::try_from(input_slice.deref())
+            }
+        }.ok()
     }
 }
 
@@ -452,6 +496,7 @@ mod tests {
             false,
             SpecId::default(),
             u64::MAX,
+            SentioDebugTracingOptions::default(),
         );
 
         let serialized = serde_json::to_string_pretty(&interpreter).unwrap();
@@ -492,6 +537,7 @@ fn test_mstore_big_offset_memory_oog() {
         false,
         SpecId::default(),
         1000,
+        SentioDebugTracingOptions::default(),
     );
 
     let table = instruction_table::<EthInterpreter, DummyHost>();

@@ -697,7 +697,7 @@ mod tests {
 
         // Limit of 64 bytes allows 2 words.
         let mut memory = SharedMemory::new_with_memory_limit(64);
-        let mut gas = crate::Gas::new(100_000);
+        let mut gas = crate::Gas::new(100_000, false);
 
         // Resize to 1 word (32 bytes) should succeed.
         assert!(resize_memory(&mut gas, &mut memory, &gas_table, 0, 32).is_ok());
