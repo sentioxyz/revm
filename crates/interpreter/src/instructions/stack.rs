@@ -151,6 +151,7 @@ mod tests {
             false,
             SpecId::AMSTERDAM,
             u64::MAX,
+            alloy_rpc_types_trace::geth::SentioDebugTracingOptions::default(),
         );
         let table = instruction_table::<EthInterpreter, DummyHost>();
         let gas = gas_table();

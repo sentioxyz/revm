@@ -27,6 +27,9 @@ state.workspace = true
 # optional
 serde = { workspace = true, features = ["derive", "rc"], optional = true }
 
+alloy-rpc-types-trace.workspace = true
+log.workspace = true
+
 [dev-dependencies]
 serde_json = { workspace = true, features = ["alloc"] }
 
